@@ -165,6 +165,80 @@ const Index = () => {
     });
   };
 
+  const handleWBFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet);
+
+        const newSales: WBSale[] = json.map((row: any, index: number) => ({
+          id: row['ID'] || row['id'] || `WB-${Date.now()}-${index}`,
+          product: row['Товар'] || row['Наименование'] || row['product'] || row['Product'] || 'Не указано',
+          article: row['Артикул'] || row['article'] || row['Article'] || row['Артикул WB'] || 'N/A',
+          quantity: Number(row['Количество'] || row['quantity'] || row['Quantity'] || row['Кол-во'] || 0),
+          price: Number(row['Цена'] || row['price'] || row['Price'] || row['Цена продажи'] || 0),
+          commission: Number(row['Комиссия'] || row['commission'] || row['Commission'] || row['Комиссия %'] || 15),
+          date: row['Дата'] || row['date'] || row['Date'] || row['Дата продажи'] || new Date().toISOString().split('T')[0],
+          status: row['Статус'] || row['status'] || row['Status'] || 'Доставлен',
+        }));
+
+        setWbSales([...wbSales, ...newSales]);
+        toast({
+          title: 'Отчет WB загружен!',
+          description: `Добавлено ${newSales.length} записей о продажах`,
+        });
+      } catch (error) {
+        toast({
+          title: 'Ошибка загрузки',
+          description: 'Не удалось прочитать файл отчета WB. Проверьте формат.',
+          variant: 'destructive',
+        });
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const handleExportWBSales = () => {
+    const exportData = wbSales.map(sale => {
+      const totalSale = sale.quantity * sale.price;
+      const commissionAmount = totalSale * (sale.commission / 100);
+      const netProfit = totalSale - commissionAmount;
+      
+      return {
+        'ID': sale.id,
+        'Товар': sale.product,
+        'Артикул': sale.article,
+        'Количество': sale.quantity,
+        'Цена': sale.price,
+        'Комиссия %': sale.commission,
+        'Сумма продажи': totalSale,
+        'Комиссия WB': commissionAmount,
+        'Чистая прибыль': netProfit,
+        'Дата': sale.date,
+        'Статус': sale.status,
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Реализация WB');
+
+    const fileName = `WB_Продажи_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+
+    toast({
+      title: 'Экспорт завершен!',
+      description: `Файл ${fileName} успешно сохранен`,
+    });
+  };
+
   const totalRevenue = orders.reduce((sum, order) => sum + order.quantity * order.price, 0);
   const totalOrders = orders.length;
   const activeOrders = orders.filter(o => o.status === 'В обработке').length;
@@ -502,10 +576,27 @@ const Index = () => {
                       <Icon name="TrendingUp" size={24} className="text-accent" />
                       Реализация на Wildberries
                     </CardTitle>
-                    <Button variant="outline">
-                      <Icon name="Download" size={18} className="mr-2" />
-                      Экспорт WB
-                    </Button>
+                    <div className="flex gap-2">
+                      <label htmlFor="wb-file-upload">
+                        <Button variant="outline" className="cursor-pointer" asChild>
+                          <span>
+                            <Icon name="Upload" size={18} className="mr-2" />
+                            Импорт WB
+                          </span>
+                        </Button>
+                      </label>
+                      <input
+                        id="wb-file-upload"
+                        type="file"
+                        accept=".xlsx,.xls"
+                        onChange={handleWBFileUpload}
+                        className="hidden"
+                      />
+                      <Button onClick={handleExportWBSales} variant="outline">
+                        <Icon name="Download" size={18} className="mr-2" />
+                        Экспорт WB
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
