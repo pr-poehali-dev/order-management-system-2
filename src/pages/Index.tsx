@@ -100,6 +100,54 @@ const Index = () => {
     reader.readAsBinaryString(file);
   };
 
+  const handleExportOrders = () => {
+    const exportData = orders.map(order => ({
+      'ID': order.id,
+      'Товар': order.product,
+      'Клиент': order.customer,
+      'Количество': order.quantity,
+      'Цена': order.price,
+      'Сумма': order.quantity * order.price,
+      'Дата': order.date,
+      'Статус': order.status,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Заказы');
+
+    const fileName = `Заказы_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+
+    toast({
+      title: 'Экспорт завершен!',
+      description: `Файл ${fileName} успешно сохранен`,
+    });
+  };
+
+  const handleExportProducts = () => {
+    const exportData = products.map(product => ({
+      'ID': product.id,
+      'Название': product.name,
+      'Категория': product.category,
+      'На складе': product.stock,
+      'Цена': product.price,
+      'Общая стоимость': product.stock * product.price,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Товары');
+
+    const fileName = `Товары_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+
+    toast({
+      title: 'Экспорт завершен!',
+      description: `Файл ${fileName} успешно сохранен`,
+    });
+  };
+
   const totalRevenue = orders.reduce((sum, order) => sum + order.quantity * order.price, 0);
   const totalOrders = orders.length;
   const activeOrders = orders.filter(o => o.status === 'В обработке').length;
@@ -337,12 +385,18 @@ const Index = () => {
                       <Icon name="ShoppingCart" size={24} className="text-primary" />
                       Все заказы
                     </CardTitle>
-                    <Input
-                      placeholder="Поиск по заказам..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="sm:w-64"
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Поиск по заказам..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="sm:w-64"
+                      />
+                      <Button onClick={handleExportOrders} variant="outline">
+                        <Icon name="Download" size={18} className="mr-2" />
+                        Экспорт
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -389,6 +443,12 @@ const Index = () => {
 
           {activeTab === 'products' && (
             <div className="space-y-4 animate-fade-in">
+              <div className="flex justify-end mb-4">
+                <Button onClick={handleExportProducts} variant="outline">
+                  <Icon name="Download" size={18} className="mr-2" />
+                  Экспорт товаров
+                </Button>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {products.map((product) => (
                   <Card key={product.id} className="hover-scale">
