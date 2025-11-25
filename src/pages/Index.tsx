@@ -28,6 +28,17 @@ interface Product {
   category: string;
 }
 
+interface WBSale {
+  id: string;
+  product: string;
+  article: string;
+  quantity: number;
+  price: number;
+  commission: number;
+  date: string;
+  status: string;
+}
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [orders, setOrders] = useState<Order[]>([
@@ -45,6 +56,12 @@ const Index = () => {
   ]);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [wbSales, setWbSales] = useState<WBSale[]>([
+    { id: 'WB001', product: 'Ноутбук Dell XPS 15', article: 'NB12345', quantity: 3, price: 95000, commission: 15, date: '2024-11-23', status: 'Доставлен' },
+    { id: 'WB002', product: 'Монитор Samsung 27"', article: 'MN67890', quantity: 7, price: 28000, commission: 12, date: '2024-11-24', status: 'В пути' },
+    { id: 'WB003', product: 'Клавиатура Logitech MX', article: 'KB11223', quantity: 12, price: 4200, commission: 10, date: '2024-11-22', status: 'Доставлен' },
+    { id: 'WB004', product: 'Мышь Razer DeathAdder', article: 'MS44556', quantity: 15, price: 5100, commission: 10, date: '2024-11-21', status: 'Доставлен' },
+  ]);
 
   const revenueData = [
     { month: 'Янв', revenue: 450000, orders: 25 },
@@ -180,6 +197,7 @@ const Index = () => {
             {[
               { icon: 'LayoutDashboard', label: 'Дашборд', value: 'dashboard' },
               { icon: 'ShoppingCart', label: 'Закупка', value: 'orders' },
+              { icon: 'TrendingUp', label: 'Реализация WB', value: 'wb-sales' },
               { icon: 'Package', label: 'Товары', value: 'products' },
               { icon: 'DollarSign', label: 'Финансы', value: 'finance' },
               { icon: 'BarChart3', label: 'Аналитика', value: 'analytics' },
@@ -234,9 +252,10 @@ const Index = () => {
 
           <div className="lg:hidden mb-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-3 lg:grid-cols-6">
+              <TabsList className="grid grid-cols-3 lg:grid-cols-7">
                 <TabsTrigger value="dashboard">Дашборд</TabsTrigger>
                 <TabsTrigger value="orders">Закупка</TabsTrigger>
+                <TabsTrigger value="wb-sales">WB</TabsTrigger>
                 <TabsTrigger value="products">Товары</TabsTrigger>
                 <TabsTrigger value="finance">Финансы</TabsTrigger>
                 <TabsTrigger value="analytics">Аналитика</TabsTrigger>
@@ -471,6 +490,104 @@ const Index = () => {
                   </Card>
                 ))}
               </div>
+            </div>
+          )}
+
+          {activeTab === 'wb-sales' && (
+            <div className="space-y-4 animate-fade-in">
+              <Card>
+                <CardHeader>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <CardTitle className="flex items-center gap-2">
+                      <Icon name="TrendingUp" size={24} className="text-accent" />
+                      Реализация на Wildberries
+                    </CardTitle>
+                    <Button variant="outline">
+                      <Icon name="Download" size={18} className="mr-2" />
+                      Экспорт WB
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>ID</TableHead>
+                          <TableHead>Товар</TableHead>
+                          <TableHead>Артикул</TableHead>
+                          <TableHead className="text-right">Кол-во</TableHead>
+                          <TableHead className="text-right">Цена</TableHead>
+                          <TableHead className="text-right">Комиссия %</TableHead>
+                          <TableHead className="text-right">Сумма продажи</TableHead>
+                          <TableHead className="text-right">Чистая прибыль</TableHead>
+                          <TableHead>Дата</TableHead>
+                          <TableHead>Статус</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {wbSales.map((sale) => {
+                          const totalSale = sale.quantity * sale.price;
+                          const commissionAmount = totalSale * (sale.commission / 100);
+                          const netProfit = totalSale - commissionAmount;
+                          
+                          return (
+                            <TableRow key={sale.id} className="hover:bg-muted/50">
+                              <TableCell className="font-medium">{sale.id}</TableCell>
+                              <TableCell>{sale.product}</TableCell>
+                              <TableCell className="font-mono text-sm">{sale.article}</TableCell>
+                              <TableCell className="text-right">{sale.quantity}</TableCell>
+                              <TableCell className="text-right">{sale.price.toLocaleString('ru-RU')} ₽</TableCell>
+                              <TableCell className="text-right">{sale.commission}%</TableCell>
+                              <TableCell className="text-right font-semibold">
+                                {totalSale.toLocaleString('ru-RU')} ₽
+                              </TableCell>
+                              <TableCell className="text-right font-bold text-green-600">
+                                {netProfit.toLocaleString('ru-RU')} ₽
+                              </TableCell>
+                              <TableCell className="text-sm">{sale.date}</TableCell>
+                              <TableCell>
+                                <Badge className={getStatusColor(sale.status)}>
+                                  {sale.status}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5">
+                      <CardContent className="pt-6">
+                        <div className="text-sm text-muted-foreground mb-1">Общая выручка WB</div>
+                        <div className="text-2xl font-bold text-primary">
+                          {wbSales.reduce((sum, s) => sum + s.quantity * s.price, 0).toLocaleString('ru-RU')} ₽
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-gradient-to-br from-red-500/10 to-red-500/5">
+                      <CardContent className="pt-6">
+                        <div className="text-sm text-muted-foreground mb-1">Комиссия WB</div>
+                        <div className="text-2xl font-bold text-destructive">
+                          {wbSales.reduce((sum, s) => sum + (s.quantity * s.price * s.commission / 100), 0).toLocaleString('ru-RU')} ₽
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5">
+                      <CardContent className="pt-6">
+                        <div className="text-sm text-muted-foreground mb-1">Чистая прибыль</div>
+                        <div className="text-2xl font-bold text-green-600">
+                          {wbSales.reduce((sum, s) => {
+                            const total = s.quantity * s.price;
+                            return sum + (total - total * s.commission / 100);
+                          }, 0).toLocaleString('ru-RU')} ₽
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
 
