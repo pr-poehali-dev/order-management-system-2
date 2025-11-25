@@ -258,6 +258,68 @@ const Index = () => {
     }
   };
 
+  const calculateMarginAnalysis = () => {
+    const productMap = new Map<string, { 
+      purchasePrice: number; 
+      purchaseQty: number;
+      salePrice: number;
+      saleQty: number;
+      commission: number;
+    }>();
+
+    orders.forEach(order => {
+      const productName = order.product.toLowerCase();
+      const existing = productMap.get(productName) || { 
+        purchasePrice: 0, 
+        purchaseQty: 0, 
+        salePrice: 0, 
+        saleQty: 0,
+        commission: 0
+      };
+      existing.purchasePrice = order.price;
+      existing.purchaseQty += order.quantity;
+      productMap.set(productName, existing);
+    });
+
+    wbSales.forEach(sale => {
+      const productName = sale.product.toLowerCase();
+      const existing = productMap.get(productName);
+      if (existing) {
+        existing.salePrice = sale.price;
+        existing.saleQty += sale.quantity;
+        existing.commission = sale.commission;
+      }
+    });
+
+    return Array.from(productMap.entries())
+      .filter(([_, data]) => data.saleQty > 0)
+      .map(([name, data]) => {
+        const totalCost = data.purchasePrice * data.saleQty;
+        const totalRevenue = data.salePrice * data.saleQty;
+        const commissionAmount = totalRevenue * (data.commission / 100);
+        const netRevenue = totalRevenue - commissionAmount;
+        const profit = netRevenue - totalCost;
+        const margin = totalCost > 0 ? ((profit / totalCost) * 100) : 0;
+
+        return {
+          product: name,
+          purchasePrice: data.purchasePrice,
+          salePrice: data.salePrice,
+          soldQty: data.saleQty,
+          totalCost,
+          totalRevenue,
+          commission: data.commission,
+          commissionAmount,
+          netRevenue,
+          profit,
+          margin
+        };
+      })
+      .sort((a, b) => b.profit - a.profit);
+  };
+
+  const marginAnalysis = calculateMarginAnalysis();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
       <div className="lg:flex">
@@ -272,6 +334,7 @@ const Index = () => {
               { icon: 'LayoutDashboard', label: 'Дашборд', value: 'dashboard' },
               { icon: 'ShoppingCart', label: 'Закупка', value: 'orders' },
               { icon: 'TrendingUp', label: 'Реализация WB', value: 'wb-sales' },
+              { icon: 'Percent', label: 'Маржинальность', value: 'margin' },
               { icon: 'Package', label: 'Товары', value: 'products' },
               { icon: 'DollarSign', label: 'Финансы', value: 'finance' },
               { icon: 'BarChart3', label: 'Аналитика', value: 'analytics' },
@@ -326,10 +389,11 @@ const Index = () => {
 
           <div className="lg:hidden mb-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-3 lg:grid-cols-7">
+              <TabsList className="grid grid-cols-4 lg:grid-cols-8">
                 <TabsTrigger value="dashboard">Дашборд</TabsTrigger>
                 <TabsTrigger value="orders">Закупка</TabsTrigger>
                 <TabsTrigger value="wb-sales">WB</TabsTrigger>
+                <TabsTrigger value="margin">Маржа</TabsTrigger>
                 <TabsTrigger value="products">Товары</TabsTrigger>
                 <TabsTrigger value="finance">Финансы</TabsTrigger>
                 <TabsTrigger value="analytics">Аналитика</TabsTrigger>
@@ -677,6 +741,110 @@ const Index = () => {
                       </CardContent>
                     </Card>
                   </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === 'margin' && (
+            <div className="space-y-4 animate-fade-in">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Icon name="Percent" size={24} className="text-primary" />
+                    Анализ маржинальности товаров
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {marginAnalysis.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Icon name="Info" size={48} className="text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">
+                        Загрузите данные о закупках и продажах для расчета маржинальности
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Товар</TableHead>
+                              <TableHead className="text-right">Цена закупки</TableHead>
+                              <TableHead className="text-right">Цена продажи</TableHead>
+                              <TableHead className="text-right">Продано</TableHead>
+                              <TableHead className="text-right">Себестоимость</TableHead>
+                              <TableHead className="text-right">Выручка</TableHead>
+                              <TableHead className="text-right">Комиссия WB</TableHead>
+                              <TableHead className="text-right">Чистая выручка</TableHead>
+                              <TableHead className="text-right">Прибыль</TableHead>
+                              <TableHead className="text-right">Маржа %</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {marginAnalysis.map((item, index) => (
+                              <TableRow key={index} className="hover:bg-muted/50">
+                                <TableCell className="font-medium capitalize">{item.product}</TableCell>
+                                <TableCell className="text-right">{item.purchasePrice.toLocaleString('ru-RU')} ₽</TableCell>
+                                <TableCell className="text-right">{item.salePrice.toLocaleString('ru-RU')} ₽</TableCell>
+                                <TableCell className="text-right">{item.soldQty}</TableCell>
+                                <TableCell className="text-right">{item.totalCost.toLocaleString('ru-RU')} ₽</TableCell>
+                                <TableCell className="text-right">{item.totalRevenue.toLocaleString('ru-RU')} ₽</TableCell>
+                                <TableCell className="text-right text-red-500">
+                                  -{item.commissionAmount.toLocaleString('ru-RU')} ₽
+                                </TableCell>
+                                <TableCell className="text-right font-semibold">
+                                  {item.netRevenue.toLocaleString('ru-RU')} ₽
+                                </TableCell>
+                                <TableCell className={`text-right font-bold ${item.profit > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {item.profit > 0 ? '+' : ''}{item.profit.toLocaleString('ru-RU')} ₽
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Badge className={item.margin > 50 ? 'bg-green-500' : item.margin > 20 ? 'bg-blue-500' : 'bg-orange-500'}>
+                                    {item.margin.toFixed(1)}%
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      <div className="mt-6 grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5">
+                          <CardContent className="pt-6">
+                            <div className="text-sm text-muted-foreground mb-1">Общая себестоимость</div>
+                            <div className="text-xl font-bold text-primary">
+                              {marginAnalysis.reduce((sum, item) => sum + item.totalCost, 0).toLocaleString('ru-RU')} ₽
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5">
+                          <CardContent className="pt-6">
+                            <div className="text-sm text-muted-foreground mb-1">Общая выручка</div>
+                            <div className="text-xl font-bold text-accent">
+                              {marginAnalysis.reduce((sum, item) => sum + item.totalRevenue, 0).toLocaleString('ru-RU')} ₽
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card className="bg-gradient-to-br from-red-500/10 to-red-500/5">
+                          <CardContent className="pt-6">
+                            <div className="text-sm text-muted-foreground mb-1">Комиссия WB</div>
+                            <div className="text-xl font-bold text-destructive">
+                              -{marginAnalysis.reduce((sum, item) => sum + item.commissionAmount, 0).toLocaleString('ru-RU')} ₽
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5">
+                          <CardContent className="pt-6">
+                            <div className="text-sm text-muted-foreground mb-1">Итоговая прибыль</div>
+                            <div className="text-xl font-bold text-green-600">
+                              +{marginAnalysis.reduce((sum, item) => sum + item.profit, 0).toLocaleString('ru-RU')} ₽
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>
