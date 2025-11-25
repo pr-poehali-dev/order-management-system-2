@@ -179,7 +179,7 @@ const Index = () => {
           <nav className="space-y-2">
             {[
               { icon: 'LayoutDashboard', label: 'Дашборд', value: 'dashboard' },
-              { icon: 'ShoppingCart', label: 'Заказы', value: 'orders' },
+              { icon: 'ShoppingCart', label: 'Закупка', value: 'orders' },
               { icon: 'Package', label: 'Товары', value: 'products' },
               { icon: 'DollarSign', label: 'Финансы', value: 'finance' },
               { icon: 'BarChart3', label: 'Аналитика', value: 'analytics' },
@@ -236,7 +236,7 @@ const Index = () => {
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid grid-cols-3 lg:grid-cols-6">
                 <TabsTrigger value="dashboard">Дашборд</TabsTrigger>
-                <TabsTrigger value="orders">Заказы</TabsTrigger>
+                <TabsTrigger value="orders">Закупка</TabsTrigger>
                 <TabsTrigger value="products">Товары</TabsTrigger>
                 <TabsTrigger value="finance">Финансы</TabsTrigger>
                 <TabsTrigger value="analytics">Аналитика</TabsTrigger>
@@ -383,11 +383,11 @@ const Index = () => {
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <CardTitle className="flex items-center gap-2">
                       <Icon name="ShoppingCart" size={24} className="text-primary" />
-                      Все заказы
+                      Все закупки
                     </CardTitle>
                     <div className="flex gap-2">
                       <Input
-                        placeholder="Поиск по заказам..."
+                        placeholder="Поиск по закупкам..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="sm:w-64"
